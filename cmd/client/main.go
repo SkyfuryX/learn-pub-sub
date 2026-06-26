@@ -21,18 +21,31 @@ func main() {
 		return
 	}
 	defer conn.Close()
+	channel, err := conn.Channel()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+
 	fmt.Println("Connected!")
 	userName, err := gamelogic.ClientWelcome()
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-	_, _, err = pubsub.DeclareAndBind(conn, routing.ExchangePerilDirect, routing.PauseKey+"."+userName, routing.PauseKey, pubsub.TransientQueue)
+
+	gameState := gamelogic.NewGameState(userName)
+	err = pubsub.SubscribeJSON(conn, routing.ExchangePerilDirect, "pause."+userName, routing.PauseKey, pubsub.TransientQueue, handlerPause(gameState))
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-	gameState := gamelogic.NewGameState(userName)
+	err = pubsub.SubscribeJSON(conn, routing.ExchangePerilTopic, "army_moves."+userName, "army_moves.*", pubsub.TransientQueue, handlerMove(gameState))
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 
 	for {
 		cmds := gamelogic.GetInput()
@@ -43,14 +56,15 @@ func main() {
 		case "spawn":
 			err = gameState.CommandSpawn(cmds)
 			if err != nil {
-				fmt.Println("Invalid spawn - ex: spawn europe infantry")
+				fmt.Println(err)
 			}
 		case "move":
-			_, err := gameState.CommandMove(cmds)
+			move, err := gameState.CommandMove(cmds)
 			if err != nil {
-				fmt.Println("Invalid move - ex: move europe 1")
+				fmt.Println(err)
 			} else {
-				fmt.Printf("%v\n", strings.Join(cmds, " "))
+				pubsub.PublishJSON(channel, routing.ExchangePerilTopic, "army_moves."+userName, move)
+				fmt.Printf("Move Published: %v\n", strings.Join(cmds, " "))
 			}
 		case "status":
 			gameState.CommandStatus()
