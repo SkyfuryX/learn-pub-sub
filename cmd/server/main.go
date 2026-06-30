@@ -26,10 +26,14 @@ func main() {
 		fmt.Println(err)
 		return
 	}
-	_, _, err = pubsub.DeclareAndBind(conn, routing.ExchangePerilTopic, "game_logs", "game_logs.*", pubsub.DurableQueue)
-	if err != nil {
-		fmt.Println(err)
-	}
+
+	err = pubsub.SubscribeGob(
+		conn, 
+		routing.ExchangePerilTopic, 
+		routing.GameLogSlug, 
+		routing.GameLogSlug+".*", 
+		pubsub.DurableQueue, 
+		handlerLogs())
 
 	gamelogic.PrintServerHelp()
 	for {
