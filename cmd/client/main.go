@@ -41,7 +41,13 @@ func main() {
 		fmt.Println(err)
 		return
 	}
-	err = pubsub.SubscribeJSON(conn, routing.ExchangePerilTopic, "army_moves."+userName, "army_moves.*", pubsub.TransientQueue, handlerMove(gameState))
+	err = pubsub.SubscribeJSON(conn, routing.ExchangePerilTopic, "army_moves."+userName, "army_moves.*", pubsub.TransientQueue, handlerMove(gameState, channel))
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	err = pubsub.SubscribeJSON(conn, routing.ExchangePerilTopic,"war", routing.WarRecognitionsPrefix+".*", pubsub.DurableQueue, handlerWar(gameState))
 	if err != nil {
 		fmt.Println(err)
 		return

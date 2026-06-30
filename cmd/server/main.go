@@ -52,7 +52,6 @@ func main() {
 			if err != nil {
 				fmt.Println(err)
 				return
-
 			}
 		case "quit":
 			fmt.Println("Shutting down server...")
